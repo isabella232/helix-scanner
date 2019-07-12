@@ -41,22 +41,29 @@ const server = http.createServer((req, res) => {
   res.end('Hello World\n');
 });
 
+const parseMarkdown = text => {
+    let title = text.match(/^# (.*)\n/m)[1];
+    console.log(title);
+}
+
 server.listen(port, hostname, () => {
     console.log(`Server running at http://${hostname}:${port}/`);
 
+    // grab content metadata with a specific path
     octokit.paginate('GET /repos/:owner/:repo/contents/:path',
         { owner: 'adobe', repo: 'helix-home', path: 'hackathons/' },
         response => response.data.filter(file => 
             file.type == 'file' && file.name.includes('.md'))
     )
     .then(files => files.map(file => {
+        // get the actual contents of files
         octokit.paginate('GET /repos/:owner/:repo/git/blobs/:file_sha',
             { owner: 'adobe', repo: 'helix-home', file_sha: file.sha },
             response => response.data.content)
         .then(content => {
             let buff = Buffer.from(content[0], 'base64');  
             let text = buff.toString('ascii');
-            console.log('"' + content + '" converted from Base64 to ASCII is "' + text + '"');
+            parseMarkdown(text);
         });
     }));
 
