@@ -21,11 +21,9 @@ const pg = require('pg');
 
 const config = {
     host: 'helix-azure-gql.postgres.database.azure.com',
-    // Do not hard code your username and password.
-    // Consider using Node environment variables.
     user: 'hasura@helix-azure-gql',     
     password: 'Csisfun0',
-    database: 'helix-azure-gql',
+    database: 'hasura',
     port: 5432,
     ssl: true
 };
@@ -49,25 +47,25 @@ const parseMarkdown = text => {
 server.listen(port, hostname, () => {
     console.log(`Server running at http://${hostname}:${port}/`);
 
-    // grab content metadata with a specific path
-    octokit.paginate('GET /repos/:owner/:repo/contents/:path',
-        { owner: 'adobe', repo: 'helix-home', path: 'hackathons/' },
-        response => response.data.filter(file => 
-            file.type == 'file' && file.name.includes('.md'))
-    )
-    .then(files => files.map(file => {
-        // get the actual contents of files
-        octokit.paginate('GET /repos/:owner/:repo/git/blobs/:file_sha',
-            { owner: 'adobe', repo: 'helix-home', file_sha: file.sha },
-            response => response.data.content)
-        .then(content => {
-            let buff = Buffer.from(content[0], 'base64');  
-            let text = buff.toString('ascii');
-            parseMarkdown(text);
-        });
-    }));
+    // // grab content metadata with a specific path
+    // octokit.paginate('GET /repos/:owner/:repo/contents/:path',
+    //     { owner: 'adobe', repo: 'helix-home', path: 'hackathons/' },
+    //     response => response.data.filter(file => 
+    //         file.type == 'file' && file.name.includes('.md'))
+    // )
+    // .then(files => files.map(file => {
+    //     // get the actual contents of files
+    //     octokit.paginate('GET /repos/:owner/:repo/git/blobs/:file_sha',
+    //         { owner: 'adobe', repo: 'helix-home', file_sha: file.sha },
+    //         response => response.data.content)
+    //     .then(content => {
+    //         let buff = Buffer.from(content[0], 'base64');  
+    //         let text = buff.toString('ascii');
+    //         parseMarkdown(text);
+    //     });
+    // }));
 
-    /*
+
     client.connect(err => {
         if (err) throw err;
         else { queryDatabase(); }
@@ -75,7 +73,7 @@ server.listen(port, hostname, () => {
 
     function queryDatabase() {
     
-        console.log(`Running query to PostgreSQL server: ${config.host}`);
+        // console.log(`Running query to PostgreSQL server: ${config.host}`);
 
         const query = 'SELECT * FROM markdowns;';
 
@@ -93,5 +91,5 @@ server.listen(port, hostname, () => {
                 console.log(err);
             });
     }
-    */
+
 });
