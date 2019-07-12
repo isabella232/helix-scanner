@@ -2,7 +2,7 @@ const http = require('http');
 const request = require("request");
 const Octokit = require('@octokit/rest');
 const octokit = new Octokit({
-    auth: '8a3525e5b6e73039b6cc2f1f48534a98e4fdd4bc',
+    auth: process.env.HELIX_SCANNER_GITHUB_AUTH_TOKEN,
     baseUrl: 'https://api.github.com',
     log: {
         debug: () => {},
@@ -20,10 +20,10 @@ const octokit = new Octokit({
 const pg = require('pg');
 
 const config = {
-    host: 'helix-azure-gql.postgres.database.azure.com',
-    user: 'hasura@helix-azure-gql',     
-    password: 'Csisfun0',
-    database: 'hasura',
+    host: process.env.HELIX_SCANNER_POSTGRESQL_DB_HOST,
+    user: process.env.HELIX_SCANNER_POSTGRESQL_DB_USER,     
+    password: process.env.HELIX_SCANNER_POSTGRESQL_DB_PASSWORD,
+    database: process.env.HELIX_SCANNER_POSTGRESQL_DB_NAME,
     port: 5432,
     ssl: true
 };
