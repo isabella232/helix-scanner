@@ -44,47 +44,21 @@ const server = http.createServer((req, res) => {
 server.listen(port, hostname, () => {
     console.log(`Server running at http://${hostname}:${port}/`);
 
-    var options = {
-        host: 'api.github.com',
-        path: '/repos/adobe/helix-home/git/blobs/796e885899b506e1af80d9ac8841e26aabcc9d9b'
-    }
-    var request = http.request(options, function (res) {
-        var data = '';
-        res.on('data', function (chunk) {
-            data += chunk;
+    octokit.paginate('GET /repos/:owner/:repo/contents/:path',
+        { owner: 'adobe', repo: 'helix-home', path: 'hackathons/' },
+        response => response.data.filter(file => 
+            file.type == 'file' && file.name.includes('.md'))
+    )
+    .then(files => files.map(file => {
+        octokit.paginate('GET /repos/:owner/:repo/git/blobs/:file_sha',
+            { owner: 'adobe', repo: 'helix-home', file_sha: file.sha },
+            response => response.data.content)
+        .then(content => {
+            let buff = Buffer.from(content[0], 'base64');  
+            let text = buff.toString('ascii');
+            console.log('"' + content + '" converted from Base64 to ASCII is "' + text + '"');
         });
-        res.on('end', function () {
-            console.log(data);
-    
-        });
-    });
-    request.on('error', function (e) {
-        console.log(e.message);
-    });
-    request.end();
-    // octokit.paginate('GET /repos/:owner/:repo/contents/:path', { owner: 'adobe', repo: 'helix-home', path: 'hackathons/' }, response => response.data.map(file => file.content))
-    // .then(contents => {
-    //     console.log(contents);
-    // });
-
-    // octokit.paginate('GET /repos/:owner/:repo/contents/:path',
-    //     { owner: 'adobe', repo: 'helix-home', path: 'hackathons/' },
-    //     response => response.data.filter(file => {
-    //         file.type == 'file' && file.name.includes('.md');
-    //     }))
-    //     .then(contents => {
-    //         console.log(contents);
-    //     }
-    // );
-
-    octokit.paginate('GET /repos/:owner/:repo/git/blobs/:file_sha',
-        { owner: 'adobe', repo: 'helix-home', file_sha: '796e885899b506e1af80d9ac8841e26aabcc9d9b' },
-        response => response.data.content)
-    .then(content => {
-        let buff = new Buffer(content[0], 'base64');  
-        let text = buff.toString('ascii');
-        console.log('"' + content + '" converted from Base64 to ASCII is "' + text + '"');
-    });
+    }));
 
     /*
     client.connect(err => {
