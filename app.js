@@ -66,7 +66,6 @@ server.listen(port, hostname, () => {
                 let url = data.url;
                 let buff = Buffer.from(data.content, 'base64');  
                 let text = buff.toString('ascii');
-                console.log(text);
                 titles[url] = parseMarkdown(text);
             }
         ));
@@ -87,9 +86,14 @@ server.listen(port, hostname, () => {
         let final_query = '';
         Object.keys(titles).map((url) => {
             const title = titles[url];
-            const query = `INSERT INTO documents (url, title, path) VALUES ('${url}', ${title}', '${path}');`;
+            console.log('title: ', title);
+            console.log('url: ', url);
+            const query = `INSERT INTO documents (url, title, path) VALUES ('${url}', '${title}', '${path}');`;
+            console.log('query: ',query);
             final_query.concat(query);
         });
+
+        console.log('final query looks like: ', final_query);
 
         client.query(final_query)
             .then(res => {
