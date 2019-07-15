@@ -42,7 +42,9 @@ const server = http.createServer((req, res) => {
 
 const parseMarkdown = text => text.match(/^# (.*)\n/m)[1];
 
-let titles = [];
+// key: url (string)
+// val: title (string)
+let titles = {};
 
 server.listen(port, hostname, () => {
     console.log(`Server running at http://${hostname}:${port}/`);
@@ -53,23 +55,21 @@ server.listen(port, hostname, () => {
         response => response.data.filter(file => 
             file.type == 'file' && file.name.includes('.md'))
     )
-    .catch(err => {
-        console.log(err);
-    })
     .then(files => files.map(file => {
         // get the actual contents of files
         octokit.paginate('GET /repos/:owner/:repo/git/blobs/:file_sha',
-            { owner: 'adobe', repo: 'helix-home', file_sha: file.sha },
-            response => response.data.content
+            { owner: 'adobe', repo: 'helix-home', file_sha: file.sha }
         )
-        .catch(err => {
-            console.log(err);
-        })
-        .then(content => {
-            let buff = Buffer.from(content[0], 'base64');  
-            let text = buff.toString('ascii');
-            titles.push(parseMarkdown(text));
-        });
+        // only 1 response object in an array
+        .then(response => response.map(
+            data => {
+                let url = data.url;
+                let buff = Buffer.from(data.content, 'base64');  
+                let text = buff.toString('ascii');
+                console.log(text);
+                titles[url] = parseMarkdown(text);
+            }
+        ));
     }));
 
     client.connect(err => {
@@ -85,8 +85,9 @@ server.listen(port, hostname, () => {
         console.log(`Running query to PostgreSQL server: ${config.host}`);
 
         let final_query = '';
-        titles.map(title => {
-            const query = `INSERT INTO documents (title, path) VALUES ('${title}', '${path}');`;
+        Object.keys(titles).map((url) => {
+            const title = titles[url];
+            const query = `INSERT INTO documents (url, title, path) VALUES ('${url}', ${title}', '${path}');`;
             final_query.concat(query);
         });
 
