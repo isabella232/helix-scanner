@@ -31,6 +31,7 @@ const client = new pg.Client(config);
 
 const hostname = '127.0.0.1';
 const port = 3000;
+const path = 'hackathons/';
 
 
 const server = http.createServer((req, res) => {
@@ -39,57 +40,72 @@ const server = http.createServer((req, res) => {
   res.end('Hello World\n');
 });
 
-const parseMarkdown = text => {
-    let title = text.match(/^# (.*)\n/m)[1];
-    console.log(title);
-}
+const parseMarkdown = text => text.match(/^# (.*)\n/m)[1];
+
+let titles = [];
 
 server.listen(port, hostname, () => {
     console.log(`Server running at http://${hostname}:${port}/`);
 
-    // // grab content metadata with a specific path
-    // octokit.paginate('GET /repos/:owner/:repo/contents/:path',
-    //     { owner: 'adobe', repo: 'helix-home', path: 'hackathons/' },
-    //     response => response.data.filter(file => 
-    //         file.type == 'file' && file.name.includes('.md'))
-    // )
-    // .then(files => files.map(file => {
-    //     // get the actual contents of files
-    //     octokit.paginate('GET /repos/:owner/:repo/git/blobs/:file_sha',
-    //         { owner: 'adobe', repo: 'helix-home', file_sha: file.sha },
-    //         response => response.data.content)
-    //     .then(content => {
-    //         let buff = Buffer.from(content[0], 'base64');  
-    //         let text = buff.toString('ascii');
-    //         parseMarkdown(text);
-    //     });
-    // }));
-
+    // grab content metadata with a specific path
+    octokit.paginate('GET /repos/:owner/:repo/contents/:path',
+        { owner: 'adobe', repo: 'helix-home', path: path },
+        response => response.data.filter(file => 
+            file.type == 'file' && file.name.includes('.md'))
+    )
+    .catch(err => {
+        console.log(err);
+    })
+    .then(files => files.map(file => {
+        // get the actual contents of files
+        octokit.paginate('GET /repos/:owner/:repo/git/blobs/:file_sha',
+            { owner: 'adobe', repo: 'helix-home', file_sha: file.sha },
+            response => response.data.content
+        )
+        .catch(err => {
+            console.log(err);
+        })
+        .then(content => {
+            let buff = Buffer.from(content[0], 'base64');  
+            let text = buff.toString('ascii');
+            titles.push(parseMarkdown(text));
+        });
+    }));
 
     client.connect(err => {
+        console.log(titles);
         if (err) throw err;
-        else { queryDatabase(); }
+        else {
+            queryDatabase(titles, path)
+        }
     });
 
-    function queryDatabase() {
+    function queryDatabase(titles, path) {
     
-        // console.log(`Running query to PostgreSQL server: ${config.host}`);
+        console.log(`Running query to PostgreSQL server: ${config.host}`);
 
-        const query = 'SELECT * FROM markdowns;';
+        let final_query = '';
+        titles.map(title => {
+            const query = `INSERT INTO documents (title, path) VALUES ('${title}', '${path}');`;
+            final_query.concat(query);
+        });
 
-        client.query(query)
+        client.query(final_query)
             .then(res => {
-                const rows = res.rows;
+                // const rows = res.rows;
 
-                rows.map(row => {
-                    console.log(`Read: ${JSON.stringify(row)}`);
-                });
+                // rows.map(row => {
+                //     console.log(`Read: ${JSON.stringify(row)}`);
+                // });
 
-                process.exit();
+                client.end(console.log('Closed client connection'));
             })
             .catch(err => {
                 console.log(err);
-            });
+            })
+            .then(() =>
+                process.exit()
+            );
     }
 
 });
