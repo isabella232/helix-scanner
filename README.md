@@ -1,6 +1,9 @@
 # helix-scanner
 a node js app that scans all markdown documents in a repository under a specific path, then grabs its title and inserts into PostgresQL database
 
+## start the app
+node app.js github/path/name
+
 ## some useful links
 github apis: https://developer.github.com/v3/repos/#list-organization-repositories
 

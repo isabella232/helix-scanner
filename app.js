@@ -1,3 +1,22 @@
+let owner = 'adobe';
+let repo = 'helix-home';
+let path = '';
+
+/*
+    0 -> node path
+    1 -> app path
+    2 -> owner name
+    3 -> repo name
+    4 -> path name (default to root)
+*/
+if (process.argv.length > 5) {
+    throw new Error('Error: too many arguments.');
+} else if (process.argv.length == 5) {
+    owner = process.argv[2];
+    repo = process.argv[3];
+    path = process.argv[4];
+}
+
 const http = require('http');
 const request = require("request");
 const Octokit = require('@octokit/rest');
@@ -31,7 +50,6 @@ const client = new pg.Client(config);
 
 const hostname = '127.0.0.1';
 const port = 3000;
-const path = 'hackathons/';
 
 
 const server = http.createServer((req, res) => {
@@ -51,14 +69,14 @@ server.listen(port, hostname, () => {
 
     // grab content metadata with a specific path
     octokit.paginate('GET /repos/:owner/:repo/contents/:path',
-        { owner: 'adobe', repo: 'helix-home', path: path },
+        { owner: owner, repo: repo, path: path },
         response => response.data.filter(file => 
             file.type == 'file' && file.name.includes('.md'))
     )
     .then(files => files.map(file => {
         // get the actual contents of files
         octokit.paginate('GET /repos/:owner/:repo/git/blobs/:file_sha',
-            { owner: 'adobe', repo: 'helix-home', file_sha: file.sha }
+            { owner: owner, repo: repo, file_sha: file.sha }
         )
         // only 1 response object in an array
         .then(response => response.map(
@@ -86,11 +104,8 @@ server.listen(port, hostname, () => {
         let final_query = '';
         Object.keys(titles).map((url) => {
             const title = titles[url];
-            console.log('title: ', title);
-            console.log('url: ', url);
             const query = `INSERT INTO documents (url, title, path) VALUES ('${url}', '${title}', '${path}');`;
-            console.log('query: ',query);
-            final_query.concat(query);
+            final_query = final_query.concat(query);
         });
 
         console.log('final query looks like: ', final_query);

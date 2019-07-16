@@ -1,0 +1,19 @@
+{
+  "name": "helix-scanner",
+  "version": "1.0.0",
+  "description": "a node js app that scans all markdown documents in a repository under a specific path, then grabs its title and inserts into PostgresQL database",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adobe/helix-scanner.git"
+  },
+  "author": "conyu@adobe.com",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/adobe/helix-scanner/issues"
+  },
+  "homepage": "https://github.com/adobe/helix-scanner#readme"
+}
