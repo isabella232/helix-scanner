@@ -1,7 +1,3 @@
-let owner = 'adobe';
-let repo = 'helix-home';
-let path = '';
-
 /*
     0 -> node path
     1 -> app path
@@ -9,13 +5,24 @@ let path = '';
     3 -> repo name
     4 -> path name (default to root)
 */
-if (process.argv.length > 5) {
-    throw new Error('Error: too many arguments.');
-} else if (process.argv.length == 5) {
-    owner = process.argv[2];
-    repo = process.argv[3];
-    path = process.argv[4];
-}
+const minimist = require('minimist');
+
+let args = minimist(process.argv.slice(2), {  
+    alias: {
+        o: 'owner',
+        r: 'repo',
+        p: 'path',
+    },
+    default: {
+        o: 'adobe',
+        r: 'helix-home',
+        p: 'hackathons/',
+    },
+});
+
+const owner = args['o'];
+const repo = args['r'];
+const path = args['p'];
 
 const http = require('http');
 const request = require("request");
@@ -58,10 +65,23 @@ const server = http.createServer((req, res) => {
   res.end('Hello World\n');
 });
 
-const parseMarkdown = text => text.match(/^# (.*)\n/m)[1];
+/*
+    if the directory contains header.md or footer.md,
+    it is very likely that they do not have a commonly defined title such as '# TITLE'
+*/
+const parseMarkdown = text => {
+    const match_res = text.match(/^# (.*)\n/m);
+    if (match_res) {
+        // since i am using () to group the regex, it will be stored as
+        // ['# TITLE', 'TITLE] and we are interested in the ele in pos 1
+        return match_res[1];
+    }
+};
 
-// key: url (string)
-// val: title (string)
+/*
+    key: url (string)
+    val: title (string)
+*/
 let titles = {};
 
 server.listen(port, hostname, () => {
@@ -71,7 +91,8 @@ server.listen(port, hostname, () => {
     octokit.paginate('GET /repos/:owner/:repo/contents/:path',
         { owner: owner, repo: repo, path: path },
         response => response.data.filter(file => 
-            file.type == 'file' && file.name.includes('.md'))
+            file.type == 'file' && file.name.includes('.md')
+        )
     )
     .then(files => files.map(file => {
         // get the actual contents of files
@@ -90,7 +111,7 @@ server.listen(port, hostname, () => {
     }));
 
     client.connect(err => {
-        console.log(titles);
+        console.log('hash url->title: ', titles);
         if (err) throw err;
         else {
             queryDatabase(titles, path)
@@ -108,7 +129,7 @@ server.listen(port, hostname, () => {
             final_query = final_query.concat(query);
         });
 
-        console.log('final query looks like: ', final_query);
+        console.log('final query: ', final_query);
 
         client.query(final_query)
             .then(res => {
