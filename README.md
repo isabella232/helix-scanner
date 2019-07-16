@@ -2,7 +2,8 @@
 a node js app that scans all markdown documents in a repository under a specific path, then grabs its title and inserts into PostgresQL database
 
 ## start the app
-node app.js github/path/name
+node app.js github/repo/ownder/name github/repo/name github/path/name
+> the repo owner defaults to `adobe`, repo name defaults to `helix-home`, and path defaults to `root`
 
 ## some useful links
 github apis: https://developer.github.com/v3/repos/#list-organization-repositories
