@@ -125,7 +125,7 @@ server.listen(port, hostname, () => {
         let final_query = '';
         Object.keys(titles).map((url) => {
             const title = titles[url];
-            const query = `INSERT INTO documents (url, title, path) VALUES ('${url}', '${title}', '${path}');`;
+            const query = `INSERT INTO documents (url, title, path) VALUES ('${url}', '${title}', '${owner}/${repo}/${path}');`;
             final_query = final_query.concat(query);
         });
 
