@@ -3,7 +3,7 @@ a node js app that scans all markdown documents in a repository under a specific
 
 ## start the app
 node app.js github/repo/ownder/name github/repo/name github/path/name
-> the repo owner defaults to `adobe`, repo name defaults to `helix-home`, and path defaults to `root`
+> the repo owner defaults to `adobe`, repo name defaults to `helix-home`, and path defaults to `''` which is root
 
 ## some useful links
 github apis: https://developer.github.com/v3/repos/#list-organization-repositories
