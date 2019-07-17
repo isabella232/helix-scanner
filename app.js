@@ -87,15 +87,7 @@ let titles = {};
 server.listen(port, hostname, () => {
     console.log(`Server running at http://${hostname}:${port}/`);
 
-    client.connect(err => {
-        if (err) throw err;
-        else {
-            console.log('Connected to database');
-        }
-    });
-
     const base_url =  `https://github.com/${owner}/${repo}/raw/master/${path}`;
-    let url = base_url;
 
     // grab content metadata with a specific path
     octokit.paginate('GET /repos/:owner/:repo/contents/:path',
@@ -105,19 +97,24 @@ server.listen(port, hostname, () => {
         )
     )
     .then(files => files.map(file => {
-        url = base_url.concat(file.name)
-        console.log('titles: ', titles);
+        const url = base_url.concat(file.name)
         titles[url] = undefined;
         console.log('outside request: ', url);
+        console.log('titles: ', titles);
     })).then(() => {
         Object.keys(titles).map((url) => {
             // get the actual contents of files
             request(url, { json: false }, (err, res, body) => {
                 if (err) throw err;
                 titles[url] = parseMarkdown(body);
-                console.log('inside titles', titles);
-                console.log('inside request: ', url);
             });
+        });
+    }).then(() => {
+        client.connect(err => {
+            if (err) throw err;
+            else {
+                queryDatabase(titles, path);
+            }
         });
     });
 
