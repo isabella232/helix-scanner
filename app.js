@@ -25,6 +25,7 @@ const repo = args['r'];
 const path = args['p'];
 
 const http = require('http');
+
 const request = require("request");
 const Octokit = require('@octokit/rest');
 const octokit = new Octokit({
@@ -83,9 +84,18 @@ const parseMarkdown = text => {
     val: title (string)
 */
 let titles = {};
-
 server.listen(port, hostname, () => {
     console.log(`Server running at http://${hostname}:${port}/`);
+
+    client.connect(err => {
+        if (err) throw err;
+        else {
+            console.log('Connected to database');
+        }
+    });
+
+    const base_url =  `https://github.com/${owner}/${repo}/raw/master/${path}`;
+    let url = base_url;
 
     // grab content metadata with a specific path
     octokit.paginate('GET /repos/:owner/:repo/contents/:path',
@@ -95,27 +105,20 @@ server.listen(port, hostname, () => {
         )
     )
     .then(files => files.map(file => {
-        // get the actual contents of files
-        octokit.paginate('GET /repos/:owner/:repo/git/blobs/:file_sha',
-            { owner: owner, repo: repo, file_sha: file.sha }
-        )
-        // only 1 response object in an array
-        .then(response => response.map(
-            data => {
-                let url = data.url;
-                let buff = Buffer.from(data.content, 'base64');  
-                let text = buff.toString('ascii');
-                titles[url] = parseMarkdown(text);
-            }
-        ));
-    }));
-
-    client.connect(err => {
-        console.log('hash url->title: ', titles);
-        if (err) throw err;
-        else {
-            queryDatabase(titles, path)
-        }
+        url = base_url.concat(file.name)
+        console.log('titles: ', titles);
+        titles[url] = undefined;
+        console.log('outside request: ', url);
+    })).then(() => {
+        Object.keys(titles).map((url) => {
+            // get the actual contents of files
+            request(url, { json: false }, (err, res, body) => {
+                if (err) throw err;
+                titles[url] = parseMarkdown(body);
+                console.log('inside titles', titles);
+                console.log('inside request: ', url);
+            });
+        });
     });
 
     function queryDatabase(titles, path) {
@@ -125,7 +128,7 @@ server.listen(port, hostname, () => {
         let final_query = '';
         Object.keys(titles).map((url) => {
             const title = titles[url];
-            const query = `INSERT INTO documents (url, title, path) VALUES ('${url}', '${title}', '${owner}/${repo}/${path}');`;
+            const query = `INSERT INTO documents_demo (url, title, path) VALUES ('${url}', '${title}', '/${owner}/${repo}/${path}');`;
             final_query = final_query.concat(query);
         });
 
