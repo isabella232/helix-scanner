@@ -94,16 +94,6 @@ server.listen(port, hostname, () => {
     .execSync('git rev-parse HEAD')
     .toString().trim()
 
-    let printoutHash = () => console.log(json_entries)
-
-    let requestContent = (url, path, printoutHash) => {
-        request(url, {json: false}, (err, res, body) => {
-            if (err) throw err
-            json_entries[path] = parseMarkdown(body)
-            printoutHash()
-        })
-    }
-
     octokit.git.getTree({
         owner: owner,
         repo: repo,
@@ -114,11 +104,11 @@ server.listen(port, hostname, () => {
     ).then(files => {
         files.map(file => {
             const url = base_url.concat(file.path)
-            requestContent(url, file.path, printoutHash)
-            // request(url, {json: false}, (err, res, body) => {
-            //     if (err) throw err
-            //     json_entries[file.path] = parseMarkdown(body)
-            // })
+            request(url, {json: false}, (err, res, body) => {
+                if (err) throw err
+                json_entries[file.path] = parseMarkdown(body)
+                console.log(json_entries)
+            })
         })
     })
 
