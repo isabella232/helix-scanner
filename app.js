@@ -75,6 +75,7 @@ const parseMarkdown = text => {
     if (match_res) {
         // since i am using () to group the regex, it will be stored as
         // ['# TITLE', 'TITLE] and we are interested in the ele in pos 1
+        console.log('matching res: ', match_res);
         return match_res[1];
     }
 };
@@ -84,10 +85,11 @@ const parseMarkdown = text => {
     val: title (string)
 */
 let titles = {};
+let names = []
 server.listen(port, hostname, () => {
     console.log(`Server running at http://${hostname}:${port}/`);
 
-    const base_url =  `https://github.com/${owner}/${repo}/raw/master/${path}`;
+    const base_url =  `https://github.com/${owner}/${repo}/raw/master/${path}`
 
     // grab content metadata with a specific path
     octokit.paginate('GET /repos/:owner/:repo/contents/:path',
@@ -97,56 +99,46 @@ server.listen(port, hostname, () => {
         )
     )
     .then(files => files.map(file => {
-        const url = base_url.concat(file.name)
+        const url = base_url.concat(file.name);
+        names.push(file.name)
         titles[url] = undefined;
-        console.log('outside request: ', url);
-        console.log('titles: ', titles);
+        // console.log('first url: ', url);
+        // console.log('first titles: ', titles);
     })).then(() => {
         Object.keys(titles).map((url) => {
             // get the actual contents of files
             request(url, { json: false }, (err, res, body) => {
                 if (err) throw err;
                 titles[url] = parseMarkdown(body);
+                console.log('second url: ', url);
+                console.log('second titles[url]: ', titles[url]);
+                console.log('second name: ', names);
             });
         });
     }).then(() => {
         client.connect(err => {
             if (err) throw err;
             else {
-                queryDatabase(titles, path);
+                names.map((name) => {
+                    queryDatabase(name);
+                });
             }
         });
+    }).then(() => {
+        client.end(console.log('Closed client connection'));
+        process.exit();
     });
 
-    function queryDatabase(titles, path) {
-    
+    function queryDatabase(name) {
         console.log(`Running query to PostgreSQL server: ${config.host}`);
+        const url = base_url.concat(name);
+        const title = titles[url];
+        const query = `INSERT INTO documents_demo (url, title, path) VALUES ('${url}', '${title}', '/${owner}/${repo}/${path}${name}');`;
 
-        let final_query = '';
-        Object.keys(titles).map((url) => {
-            const title = titles[url];
-            const query = `INSERT INTO documents_demo (url, title, path) VALUES ('${url}', '${title}', '/${owner}/${repo}/${path}');`;
-            final_query = final_query.concat(query);
-        });
-
-        console.log('final query: ', final_query);
-
-        client.query(final_query)
-            .then(res => {
-                // const rows = res.rows;
-
-                // rows.map(row => {
-                //     console.log(`Read: ${JSON.stringify(row)}`);
-                // });
-
-                client.end(console.log('Closed client connection'));
-            })
+        client.query(query)
             .catch(err => {
-                console.log(err);
+                console.log('Error executing database query: ', err);
             })
-            .then(() =>
-                process.exit()
-            );
     }
 
 });
