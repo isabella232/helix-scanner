@@ -26,7 +26,7 @@ const path = args['p'];
 
 const http = require('http');
 
-const request = require("request");
+const request = require("request-promise");
 const Octokit = require('@octokit/rest');
 const octokit = new Octokit({
     auth: process.env.HELIX_SCANNER_GITHUB_AUTH_TOKEN,
@@ -104,10 +104,9 @@ server.listen(port, hostname, () => {
     ).then(files => {
         files.map(file => {
             const url = base_url.concat(file.path)
-            request(url, {json: false}, (err, res, body) => {
-                if (err) throw err
-                json_entries[file.path] = parseMarkdown(body)
-                console.log(json_entries)
+            request({uri: url, json: false})
+            .then(content => {
+                json_entries[file.path] = parseMarkdown(content)
             })
         })
     })
