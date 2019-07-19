@@ -85,6 +85,7 @@ const parseMarkdown = text => {
 */
 let json_entries = {};
 let names = [];
+
 server.listen(port, hostname, () => {
     console.log(`Server running at http://${hostname}:${port}/`);
 
@@ -94,6 +95,21 @@ server.listen(port, hostname, () => {
     .execSync('git rev-parse HEAD')
     .toString().trim()
 
+    client.connect(err => {
+        if (err) throw err;
+    })
+
+    const execQuery = (path, title) => {
+        const description = 'May 20-24 2019 - Basel, Switzerland'
+        const query = `INSERT INTO basic (path, title, description) VALUES ('${path}', '${title}', '${description}');`;
+        console.log(`Preparing to execute query ${query}`)
+        client.query(query)
+            .catch(err => {
+                console.log(`Error executing database query '${query}': `, err)
+            })
+        return new Promise.resolve(`Query: ${query} has been executed`)
+    }
+
     octokit.git.getTree({
         owner: owner,
         repo: repo,
@@ -101,15 +117,18 @@ server.listen(port, hostname, () => {
         recursive: 1,
     }).then(response => 
         response.data.tree.filter(obj => obj.type === 'blob' && !obj.path.startsWith('.github') && obj.path.endsWith('.md'))
-    ).then(files => {
+    ).then(files => 
         files.map(file => {
             const url = base_url.concat(file.path)
             request({uri: url, json: false})
-            .then(content => {
+            .then(content => 
                 json_entries[file.path] = parseMarkdown(content)
-            })
+            ).then(title => 
+                Object.keys(json_entries).map(path =>
+                    execQuery(path, title))
+            ).then(completion => console.log(completion))
         })
-    })
+    )
 
 
     // grab content metadata with a specific path
@@ -152,16 +171,16 @@ server.listen(port, hostname, () => {
     //     process.exit();
     // });
 
-    function queryDatabase(name) {
-        console.log(`Running query to PostgreSQL server: ${config.host}`);
-        const url = base_url.concat(name);
-        const title = json_entries[url];
-        const query = `INSERT INTO documents_demo (url, title, path) VALUES ('${url}', '${title}', '/${owner}/${repo}/${path}${name}');`;
+    // function queryDatabase(name) {
+    //     console.log(`Running query to PostgreSQL server: ${config.host}`);
+    //     const url = base_url.concat(name);
+    //     const title = json_entries[url];
+    //     const query = `INSERT INTO documents_demo (url, title, path) VALUES ('${url}', '${title}', '/${owner}/${repo}/${path}${name}');`;
 
-        client.query(query)
-            .catch(err => {
-                console.log('Error executing database query: ', err);
-            })
-    }
+    //     client.query(query)
+    //         .catch(err => {
+    //             console.log('Error executing database query: ', err);
+    //         })
+    // }
 
 });
