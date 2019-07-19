@@ -25,8 +25,10 @@ const repo = args['r'];
 const path = args['p'];
 
 const http = require('http');
-
 const request = require("request-promise");
+const dotenv = require('dotenv');
+dotenv.config();
+
 const Octokit = require('@octokit/rest');
 const octokit = new Octokit({
     auth: process.env.HELIX_SCANNER_GITHUB_AUTH_TOKEN,
@@ -45,7 +47,6 @@ const octokit = new Octokit({
 });
 
 const pg = require('pg');
-
 const config = {
     host: process.env.HELIX_SCANNER_POSTGRESQL_DB_HOST,
     user: process.env.HELIX_SCANNER_POSTGRESQL_DB_USER,     
@@ -54,16 +55,16 @@ const config = {
     port: 5432,
     ssl: true
 };
+console.log(config)
 const client = new pg.Client(config);
 
 const hostname = '127.0.0.1';
-const port = 3000;
-
+const port = 3001;
 
 const server = http.createServer((req, res) => {
-  res.statusCode = 200;
-  res.setHeader('Content-Type', 'text/plain');
-  res.end('Hello World\n');
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'text/plain');
+    res.end('Hello World\n');
 });
 
 /*
@@ -95,10 +96,6 @@ server.listen(port, hostname, () => {
     .execSync('git rev-parse HEAD')
     .toString().trim()
 
-    client.connect(err => {
-        if (err) throw err;
-    })
-
     const execQuery = (path, title) => {
         const description = 'May 20-24 2019 - Basel, Switzerland'
         const query = `INSERT INTO basic (path, title, description) VALUES ('${path}', '${title}', '${description}');`;
@@ -107,80 +104,30 @@ server.listen(port, hostname, () => {
             .catch(err => {
                 console.log(`Error executing database query '${query}': `, err)
             })
-        return new Promise.resolve(`Query: ${query} has been executed`)
     }
 
-    octokit.git.getTree({
-        owner: owner,
-        repo: repo,
-        tree_sha: revision,
-        recursive: 1,
-    }).then(response => 
-        response.data.tree.filter(obj => obj.type === 'blob' && !obj.path.startsWith('.github') && obj.path.endsWith('.md'))
-    ).then(files => 
-        files.map(file => {
-            const url = base_url.concat(file.path)
-            request({uri: url, json: false})
-            .then(content => 
-                json_entries[file.path] = parseMarkdown(content)
-            ).then(title => 
-                Object.keys(json_entries).map(path =>
-                    execQuery(path, title))
-            ).then(completion => console.log(completion))
-        })
-    )
-
-
-    // grab content metadata with a specific path
-    // octokit.paginate('GET /repos/:owner/:repo/contents/:path',
-    //     { owner: owner, repo: repo, path: path },
-    //     response => response.data.filter(file => 
-    //         console.log(file)
-    //         // file.type == 'file' && file.name.includes('.md')
-    //     )
+    // octokit.git.getTree({
+    //     owner: owner,
+    //     repo: repo,
+    //     tree_sha: revision,
+    //     recursive: 1,
+    // }).then(response => 
+    //     response.data.tree.filter(obj => obj.type === 'blob' && !obj.path.startsWith('.github') && obj.path.endsWith('.md'))
+    // ).then(files => 
+    //     files.map(file => {
+    //         const url = base_url.concat(file.path)
+    //         request({uri: url, json: false})
+    //         .then(content => 
+    //             json_entries[file.path] = parseMarkdown(content)
+    //         )
+    //     })
     // )
-    // .then(files => files.map(file => {
-    //     const url = base_url.concat(file.name);
-    //     names.push(file.name);
-    //     json_entries[url] = undefined;
-    //     // console.log('outside url: ', url);
-    //     // console.log('outside json_entries: ', json_entries);
-    //     // console.log('outside name: ', names);
-    // })).then(() => {
-    //     Object.keys(json_entries).map((url) => {
-    //         // get the actual contents of files
-    //         request(url, { json: false }, (err, res, body) => {
-    //             if (err) throw err;
-    //             json_entries[url] = parseMarkdown(body);
-    //             // console.log('inside url: ', url);
-    //             // console.log('inside json_entries[url]: ', json_entries[url]);
-    //             // console.log('inside name: ', names);
-    //         });
-    //     });
-    // }).then(() => {
-    //     client.connect(err => {
-    //         if (err) throw err;
-    //         else {
-    //             names.map((name) => {
-    //                 queryDatabase(name);
-    //             });
-    //         }
-    //     });
-    // }).then(() => {
-    //     client.end(console.log('Closed client connection'));
-    //     process.exit();
-    // });
 
-    // function queryDatabase(name) {
-    //     console.log(`Running query to PostgreSQL server: ${config.host}`);
-    //     const url = base_url.concat(name);
-    //     const title = json_entries[url];
-    //     const query = `INSERT INTO documents_demo (url, title, path) VALUES ('${url}', '${title}', '/${owner}/${repo}/${path}${name}');`;
-
-    //     client.query(query)
-    //         .catch(err => {
-    //             console.log('Error executing database query: ', err);
-    //         })
-    // }
+    client.connect(err => {
+        if (err) throw err;
+        else {
+            execQuery('hackathons/', 'Project Helix Hackathons')
+        }
+    })
 
 });
