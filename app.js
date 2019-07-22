@@ -94,7 +94,7 @@ server.listen(server_port, hostname, () => {
     .toString().trim()
 
     const execQuery = (table_name, path, title) => {
-        const query = `INSERT INTO ${table_name} (path, title, description) VALUES ('${path}', '${title}');`;
+        const query = `INSERT INTO ${table_name} (path, title) VALUES ('${path}', '${title}');`;
         console.log(`Preparing to execute query ${query}`)
         client.query(query)
             .catch(err => {
