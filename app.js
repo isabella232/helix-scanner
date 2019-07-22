@@ -93,8 +93,8 @@ server.listen(server_port, hostname, () => {
     .execSync('git rev-parse HEAD')
     .toString().trim()
 
-    const execQuery = (table_name, path, title) => {
-        const query = `INSERT INTO ${table_name} (path, title) VALUES ('${path}', '${title}');`;
+    const execQuery = (table_name, file_path, file_title) => {
+        const query = `INSERT INTO ${table_name} (path, title) VALUES ('${file_path}', '${file_title}');`;
         console.log(`Preparing to execute query ${query}`)
         client.query(query)
             .catch(err => {
@@ -107,9 +107,12 @@ server.listen(server_port, hostname, () => {
         repo: repo,
         tree_sha: revision,
         recursive: 1,
-    }).then(response => 
-        response.data.tree.filter(obj => obj.type === 'blob' && !obj.path.startsWith('.github') && obj.path.endsWith('.md'))
-    ).then(files => 
+    }).then(response => {
+        if (path == '')
+            return response.data.tree.filter(obj => obj.type === 'blob' && !obj.path.startsWith('.github') && obj.path.endsWith('.md'))
+        else
+            return response.data.tree.filter(obj => obj.type === 'blob' && !obj.path.startsWith('.github') && obj.path.endsWith('.md') && obj.path.startsWith(path))
+    }).then(files => 
         files.map(file => {
             const wrapper = {}
             const idx_html = file.path.replace('.md', '.idx.html')
