@@ -55,11 +55,10 @@ const config = {
     port: 5432,
     ssl: true
 };
-console.log(config)
 const client = new pg.Client(config);
 
 const hostname = '127.0.0.1';
-const port = 3001;
+const server_port = 3001;
 
 const server = http.createServer((req, res) => {
     res.statusCode = 200;
@@ -85,20 +84,17 @@ const parseMarkdown = text => {
     val: title (string)
 */
 let json_entries = {};
-let names = [];
+server.listen(server_port, hostname, () => {
+    console.log(`Server running at http://${hostname}:${server_port}/`);
 
-server.listen(port, hostname, () => {
-    console.log(`Server running at http://${hostname}:${port}/`);
-
-    const base_url =  `https://github.com/${owner}/${repo}/raw/master/${path}`;
+    const base_url =  `http://localhost:3000/`;
 
     const revision = require('child_process')
     .execSync('git rev-parse HEAD')
     .toString().trim()
 
-    const execQuery = (path, title) => {
-        const description = 'May 20-24 2019 - Basel, Switzerland'
-        const query = `INSERT INTO basic (path, title, description) VALUES ('${path}', '${title}', '${description}');`;
+    const execQuery = (table_name, path, title) => {
+        const query = `INSERT INTO ${table_name} (path, title, description) VALUES ('${path}', '${title}');`;
         console.log(`Preparing to execute query ${query}`)
         client.query(query)
             .catch(err => {
@@ -106,28 +102,37 @@ server.listen(port, hostname, () => {
             })
     }
 
-    // octokit.git.getTree({
-    //     owner: owner,
-    //     repo: repo,
-    //     tree_sha: revision,
-    //     recursive: 1,
-    // }).then(response => 
-    //     response.data.tree.filter(obj => obj.type === 'blob' && !obj.path.startsWith('.github') && obj.path.endsWith('.md'))
-    // ).then(files => 
-    //     files.map(file => {
-    //         const url = base_url.concat(file.path)
-    //         request({uri: url, json: false})
-    //         .then(content => 
-    //             json_entries[file.path] = parseMarkdown(content)
-    //         )
-    //     })
-    // )
+    const traverseTree = () => octokit.git.getTree({
+        owner: owner,
+        repo: repo,
+        tree_sha: revision,
+        recursive: 1,
+    }).then(response => 
+        response.data.tree.filter(obj => obj.type === 'blob' && !obj.path.startsWith('.github') && obj.path.endsWith('.md'))
+    ).then(files => 
+        files.map(file => {
+            const wrapper = {}
+            const idx_html = file.path.replace('.md', '.idx.html')
+            wrapper[base_url.concat(idx_html)] = file.path
+            return wrapper
+        })
+    ).then(urls => urls.map((url_object) => {
+        for (const [url, path] of Object.entries(url_object)) {
+            request({uri: url, json: true})
+            .then(content => {
+                console.log('the request url is: ', url)
+                console.log('the title of this url is: ', content.tables[0].entries)
+                console.log('the entire content block looks like: ', content)
+                content.tables.map(table => execQuery(table.name, path, table.entries.title))
+            })}
+        }
+    ))
 
     client.connect(err => {
         if (err) throw err;
         else {
-            execQuery('hackathons/', 'Project Helix Hackathons')
+            console.log('PostgresDB connected.')
+            traverseTree()
         }
     })
-
 });
