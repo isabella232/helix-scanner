@@ -79,11 +79,6 @@ const parseMarkdown = text => {
     }
 };
 
-/*
-    key: url (string)
-    val: title (string)
-*/
-let json_entries = {};
 server.listen(server_port, hostname, () => {
     console.log(`Server running at http://${hostname}:${server_port}/`);
 
@@ -94,11 +89,18 @@ server.listen(server_port, hostname, () => {
     .toString().trim()
 
     const execQuery = (table_name, file_path, file_title) => {
-        const query = `INSERT INTO ${table_name} (path, title) VALUES ('${file_path}', '${file_title}');`;
-        console.log(`Preparing to execute query ${query}`)
-        client.query(query)
+        const create_table_query = `CREATE TABLE IF NOT EXISTS ${table_name} (
+            path     text    PRIMARY KEY,
+            title    text
+        );`;
+        client.query(create_table_query)
+            .catch(err => console.log(err))
+
+        const insert_data_query = `INSERT INTO ${table_name} (path, title) VALUES ('${file_path}', '${file_title}');`;
+        console.log(`Preparing to execute data insertion query ${insert_data_query}`)
+        client.query(insert_data_query)
             .catch(err => {
-                console.log(`Error executing database query '${query}': `, err)
+                console.log(`Error executing database query '${insert_data_query}': `, err)
             })
     }
 
@@ -111,7 +113,7 @@ server.listen(server_port, hostname, () => {
         if (path == '')
             return response.data.tree.filter(obj => obj.type === 'blob' && !obj.path.startsWith('.github') && obj.path.endsWith('.md'))
         else
-            return response.data.tree.filter(obj => obj.type === 'blob' && !obj.path.startsWith('.github') && obj.path.endsWith('.md') && obj.path.startsWith(path))
+            return response.data.tree.filter(obj => obj.type === 'blob' && !obj.path.startsWith('.github') && obj.path.endsWith('.md') && obj.path.includes(path))
     }).then(files => 
         files.map(file => {
             const wrapper = {}
