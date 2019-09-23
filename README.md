@@ -1,6 +1,11 @@
 # helix-scanner
 a node js app that scans all markdown documents in a repository under a specific path, then grabs its title and inserts into PostgresQL database
 
+# No Longer Maintained
+
+Please note this project is no longer maintained and is now in an Archived
+(read-only) state.
+
 ## start the app
 node app.js -- owner github/repo/ownder/name --repo github/repo/name --path github/path/name
 > the repo owner defaults to `adobe`, repo name defaults to `helix-home`, and path defaults to `''` which is root
